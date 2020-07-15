@@ -4,6 +4,9 @@ part of masamune.location;
 ///
 /// Execute [listen()] to request location permission and monitor for changes.
 class LocationCore extends Task<LocationCompassData> {
+  StreamSubscription<double> _compassEventSubscription;
+  StreamSubscription<LocationData> _locationEventSubscription;
+
   /// Create a Completer that matches the class.
   ///
   /// Do not use from external class
@@ -77,6 +80,11 @@ class LocationCore extends Task<LocationCompassData> {
     return unit.future;
   }
 
+  /// Abandon location information acquisition.
+  static void unlisten() {
+    LocationCore()?.dispose();
+  }
+
   static const String _systemPath = "system://location";
   LocationCore._({String path, LocationCompassData value})
       : super(path: path, value: value, isTemporary: false, group: -1);
@@ -105,13 +113,14 @@ class LocationCore extends Task<LocationCompassData> {
         return;
       }
       this.data._location = await this._location.getLocation().timeout(timeout);
-      FlutterCompass.events.listen((angle) {
+      this._compassEventSubscription = FlutterCompass.events.listen((angle) {
         if (this.data.compass._degree == angle) return;
         this.init();
         this.data.compass._degree = angle;
         this.done();
       });
-      this._location.onLocationChanged.listen((location) {
+      this._locationEventSubscription =
+          this._location.onLocationChanged.listen((location) {
         if (location == null) return;
         this.init();
         this.data._location = location;
@@ -123,6 +132,17 @@ class LocationCore extends Task<LocationCompassData> {
     } catch (e) {
       this.error(e.toString());
     }
+  }
+
+  /// Destroys the object.
+  ///
+  /// Destroyed objects are not allowed.
+  @override
+  void dispose() {
+    if (this.isDisposed || !this.isDisposable) return;
+    this._compassEventSubscription?.cancel();
+    this._locationEventSubscription?.cancel();
+    super.dispose();
   }
 
   /// Get the protocol of the path.
