@@ -15,6 +15,7 @@ import 'package:flutter_compass/flutter_compass.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import 'package:masamune_core/masamune_core.dart';
+import 'package:masamune_flutter/masamune_flutter.dart';
 export 'package:masamune_mobile/masamune_mobile.dart';
 export 'package:masamune_flutter/masamune_flutter.dart';
 

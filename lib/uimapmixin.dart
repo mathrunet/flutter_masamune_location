@@ -3,7 +3,7 @@ part of masamune.location;
 /// Mixin for using GoogleMap.
 ///
 /// Please use with Google Map.
-abstract class UIMapMixin<T extends Object> {
+mixin UIMapMixin<T extends Object> on Widget {
   /// Map value.
   final UIMapValue<T> map = UIMapValue<T>();
 }
