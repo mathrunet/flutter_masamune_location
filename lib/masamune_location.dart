@@ -19,6 +19,12 @@ import 'package:masamune_flutter/masamune_flutter.dart';
 export 'package:masamune_mobile/masamune_mobile.dart';
 export 'package:masamune_flutter/masamune_flutter.dart';
 export 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
+
+part 'hooks/mapcontroller.dart';
 
 part 'locationcore.dart';
 part 'uimapmixin.dart';
+part 'uigooglemap.dart';
+part 'mapstyle.dart';
