@@ -18,6 +18,7 @@ import 'package:masamune_core/masamune_core.dart';
 import 'package:masamune_flutter/masamune_flutter.dart';
 export 'package:masamune_mobile/masamune_mobile.dart';
 export 'package:masamune_flutter/masamune_flutter.dart';
+export 'package:google_maps_flutter/google_maps_flutter.dart';
 
 part 'locationcore.dart';
 part 'uimapmixin.dart';

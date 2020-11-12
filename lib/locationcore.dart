@@ -4,7 +4,9 @@ part of masamune.location;
 ///
 /// Execute [listen()] to request location permission and monitor for changes.
 class LocationCore extends Task<LocationCompassData> {
+  // ignore: cancel_subscriptions
   StreamSubscription<double> _compassEventSubscription;
+  // ignore: cancel_subscriptions
   StreamSubscription<LocationData> _locationEventSubscription;
 
   /// Create a Completer that matches the class.
@@ -30,6 +32,24 @@ class LocationCore extends Task<LocationCompassData> {
   }
 
   Location __location;
+
+  /// Check whether the location is currently being acquired.
+  bool get isListened {
+    LocationCore unit = PathMap.get<LocationCore>(_systemPath);
+    if (unit == null) return false;
+    if (unit.isError ||
+        unit.isAbort ||
+        !unit.isDone ||
+        unit.isDisposed ||
+        !unit.isPermitted) return false;
+    if (unit._compassEventSubscription == null ||
+        unit._locationEventSubscription == null) return false;
+    return true;
+  }
+
+  /// Check the permission status of the current location.
+  bool get isPermitted => this._permissionStatus == PermissionStatus.granted;
+  PermissionStatus _permissionStatus = PermissionStatus.denied;
 
   /// This class manages and monitors location information.
   ///
@@ -100,12 +120,13 @@ class LocationCore extends Task<LocationCompassData> {
           return;
         }
       }
-      PermissionStatus status =
+      this._permissionStatus =
           await this._location.hasPermission().timeout(timeout);
-      if (status == PermissionStatus.denied) {
-        status = await this._location.requestPermission().timeout(timeout);
+      if (this._permissionStatus == PermissionStatus.denied) {
+        this._permissionStatus =
+            await this._location.requestPermission().timeout(timeout);
       }
-      if (status != PermissionStatus.granted) {
+      if (this._permissionStatus != PermissionStatus.granted) {
         this.error(
             "You are not authorized to use the location information service. "
                     "Check the permission settings."
