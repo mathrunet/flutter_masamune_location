@@ -1,7 +1,7 @@
 part of masamune.location;
 
 /// Google Maps.
-class UIGoogleMap extends StatelessWidget {
+class UIGoogleMap extends StatefulWidget {
   /// Google Maps.
   UIGoogleMap({
     Key key,
@@ -33,13 +33,22 @@ class UIGoogleMap extends StatelessWidget {
     this.polylines,
     this.circles,
     this.onCameraMoveStarted,
+    this.icons,
     this.onCameraMove,
     this.onCameraIdle,
     this.onTap,
+    this.loader,
     this.style,
     this.onLongPress,
   })  : assert(initialCameraPosition != null),
         super(key: key);
+
+  /// Icon image to load (in assets only).
+  final Map<String, UIGoogleMapIcon> icons;
+
+  /// Builder for loading data & icons.
+  final void Function(BuildContext context, MapController controller,
+      Map<String, UIGoogleMapIcon> icons) loader;
 
   /// Map Style.
   final MapStyle style;
@@ -195,47 +204,129 @@ class UIGoogleMap extends StatelessWidget {
   /// were not claimed by any other gesture recognizer.
   final Set<Factory<OneSequenceGestureRecognizer>> gestureRecognizers;
 
+  @override
+  State<StatefulWidget> createState() => _UIGoogleMapState();
+}
+
+class _UIGoogleMapState extends State<UIGoogleMap> {
+  bool _iconLoaded = false;
+
+  @override
+  void didUpdateWidget(covariant UIGoogleMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (this.widget.controller != oldWidget.controller) {
+      this.widget.controller._initialize(oldWidget.controller.controller);
+    }
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    this.widget.controller?.dispose();
+  }
+
   /// Build.
   @override
   Widget build(BuildContext context) {
     return GoogleMap(
-      key: this.key,
-      initialCameraPosition: this.initialCameraPosition,
-      onMapCreated: (controller) {
-        if (this.style != null && this.style._style != null)
-          controller.setMapStyle(this.style._style);
-        if (this.controller != null) {
-          this.controller._initialize(controller);
+      key: this.widget.key,
+      initialCameraPosition: this.widget.initialCameraPosition,
+      onMapCreated: (controller) async {
+        if (this.widget.style != null && this.widget.style._style != null)
+          controller.setMapStyle(this.widget.style._style);
+        if (this.widget.controller != null) {
+          this.widget.controller._initialize(controller);
         }
-        this.onMapCreated?.call(controller);
+        this.widget.onMapCreated?.call(controller);
+        this.widget.controller?._current =
+            this.widget.initialCameraPosition.target;
+        if (this.widget.loader == null) return;
+        await this._getBytesFromAsset();
+        this
+            .widget
+            .loader
+            ?.call(context, this.widget.controller, this.widget.icons);
+        await Future.delayed(Duration(milliseconds: 250));
+        this.setState(() {});
       },
-      gestureRecognizers: this.gestureRecognizers,
-      compassEnabled: this.compassEnabled,
-      mapToolbarEnabled: this.mapToolbarEnabled,
-      cameraTargetBounds: this.cameraTargetBounds,
-      mapType: this.mapType,
-      minMaxZoomPreference: this.minMaxZoomPreference,
-      rotateGesturesEnabled: this.rotateGesturesEnabled,
-      scrollGesturesEnabled: this.scrollGesturesEnabled,
-      zoomControlsEnabled: this.zoomControlsEnabled,
-      zoomGesturesEnabled: this.zoomGesturesEnabled,
-      liteModeEnabled: this.liteModeEnabled,
-      tiltGesturesEnabled: this.tiltGesturesEnabled,
-      myLocationEnabled: this.myLocationEnabled,
-      myLocationButtonEnabled: this.myLocationButtonEnabled,
-      padding: this.padding,
-      indoorViewEnabled: this.indoorViewEnabled,
-      trafficEnabled: this.trafficEnabled,
-      buildingsEnabled: this.buildingsEnabled,
-      markers: this.markers,
-      polygons: this.polygons,
-      polylines: this.polylines,
-      circles: this.circles,
-      onCameraMoveStarted: this.onCameraMoveStarted,
-      onCameraMove: this.onCameraMove,
-      onCameraIdle: this.onCameraIdle,
-      onTap: this.onTap,
-      onLongPress: this.onLongPress,
+      gestureRecognizers: this.widget.gestureRecognizers,
+      compassEnabled: this.widget.compassEnabled,
+      mapToolbarEnabled: this.widget.mapToolbarEnabled,
+      cameraTargetBounds: this.widget.cameraTargetBounds,
+      mapType: this.widget.mapType,
+      minMaxZoomPreference: this.widget.minMaxZoomPreference,
+      rotateGesturesEnabled: this.widget.rotateGesturesEnabled,
+      scrollGesturesEnabled: this.widget.scrollGesturesEnabled,
+      zoomControlsEnabled: this.widget.zoomControlsEnabled,
+      zoomGesturesEnabled: this.widget.zoomGesturesEnabled,
+      liteModeEnabled: this.widget.liteModeEnabled,
+      tiltGesturesEnabled: this.widget.tiltGesturesEnabled,
+      myLocationEnabled: this.widget.myLocationEnabled,
+      myLocationButtonEnabled: this.widget.myLocationButtonEnabled,
+      padding: this.widget.padding,
+      indoorViewEnabled: this.widget.indoorViewEnabled,
+      trafficEnabled: this.widget.trafficEnabled,
+      buildingsEnabled: this.widget.buildingsEnabled,
+      markers: this.widget.markers,
+      polygons: this.widget.polygons,
+      polylines: this.widget.polylines,
+      circles: this.widget.circles,
+      onCameraMoveStarted: this.widget.onCameraMoveStarted,
+      onCameraMove: (CameraPosition position) {
+        this.widget.onCameraMove?.call(position);
+        this.widget.controller?._current = position.target;
+      },
+      onCameraIdle: () async {
+        this.widget.onCameraIdle?.call();
+        if (this.widget.loader == null) return;
+        await this._getBytesFromAsset();
+        this
+            .widget
+            .loader
+            ?.call(context, this.widget.controller, this.widget.icons);
+        this.setState(() {});
+      },
+      onTap: this.widget.onTap,
+      onLongPress: this.widget.onLongPress,
     );
   }
+
+  Future _getBytesFromAsset() async {
+    if (this._iconLoaded) return;
+    if (this.widget.icons == null || this.widget.icons.length <= 0) return;
+    for (MapEntry<String, UIGoogleMapIcon> tmp in this.widget.icons.entries) {
+      ByteData data = await rootBundle.load(tmp.value.path);
+      Codec codec = await instantiateImageCodec(data.buffer.asUint8List(),
+          targetWidth: tmp.value.width);
+      FrameInfo fi = await codec.getNextFrame();
+      tmp.value._icon = BitmapDescriptor.fromBytes(
+        (await fi.image.toByteData(format: ImageByteFormat.png))
+            .buffer
+            .asUint8List(),
+      );
+    }
+    this._iconLoaded = true;
+  }
+}
+
+/// Define a Google Maps icon.
+///
+/// If you pass the data to [icons] of [UIGoogleMap],
+/// the loaded data will be stored in [icon].
+class UIGoogleMapIcon {
+  /// Icon image path.
+  final String path;
+
+  /// Size of the icon image.
+  final int width;
+
+  /// Icon image.
+  BitmapDescriptor get icon => this._icon;
+  BitmapDescriptor _icon;
+
+  /// Define a Google Maps icon.
+  ///
+  /// If you pass the data to [icons] of [UIGoogleMap],
+  /// the loaded data will be stored in [icon].
+  UIGoogleMapIcon(this.path, [this.width = 100]) : assert(path != null);
 }

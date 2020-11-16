@@ -26,14 +26,22 @@ class _MapControllerHookState
 
   @override
   void initHook() {
-    _controller = MapController();
+    _controller = MapController._();
+    LocationCore.listen().then(
+      (core) {
+        _controller._core = core;
+        this.setState(() {});
+      },
+    );
   }
 
   @override
   MapController build(BuildContext context) => _controller;
 
   @override
-  void dispose() => _controller?.dispose();
+  void dispose() {
+    _controller?.dispose();
+  }
 
   @override
   String get debugLabel => 'useMapController';
@@ -41,9 +49,26 @@ class _MapControllerHookState
 
 /// Map controller.
 class MapController<T extends Object> {
+  MapController._();
+
+  /// LocationCore.
+  LocationCore get core => this._core;
+  LocationCore _core;
+
+  /// Current GPS Location.
+  LatLng get location {
+    LocationData data = this.core?.data?.location;
+    if (data == null) return LatLng(0, 0);
+    return LatLng(data.latitude, data.longitude);
+  }
+
+  /// Current Location.
+  LatLng get current => this._current;
+  LatLng _current = LatLng(0, 0);
+
   /// Target Location.
-  LatLng get location => this._location;
-  LatLng _location = LatLng(0, 0);
+  LatLng get target => this._target;
+  LatLng _target = LatLng(0, 0);
 
   /// Marker set.
   final Set<Marker> marker = SetPool.get();
@@ -75,7 +100,7 @@ class MapController<T extends Object> {
   /// [latitude]: Latitude.
   /// [longitude]: Longitude.
   void setTarget(double latitude, double longitude) {
-    this._location = LatLng(latitude, longitude);
+    this._target = LatLng(latitude, longitude);
   }
 
   /// Set the marker.
