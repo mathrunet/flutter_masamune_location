@@ -3,7 +3,7 @@ part of masamune.location;
 /// Mixin for using GoogleMap.
 ///
 /// Please use with Google Map.
-mixin UIMapMixin<T extends Object> on UIWidget {
+mixin UIMapMixin<T extends Object> on UIPage {
   final _UIMapValue _mapValue = _UIMapValue();
 
   /// Controller for maps.
@@ -16,8 +16,8 @@ mixin UIMapMixin<T extends Object> on UIWidget {
   /// [context]: Build context.
   @override
   @mustCallSuper
-  void onLoad(BuildContext context) {
-    super.onLoad(context);
+  void onInit(BuildContext context) {
+    super.onInit(context);
     this._mapValue._controller = useMapController();
   }
 }
